@@ -1,0 +1,20 @@
+#!/bin/bash -e
+
+PAC=_PACKAGE_
+USER=_USER_
+GROUP=_GROUP_
+USER_UID=_UID_
+USER_GID=_GID_
+HOST=$(hostname -f)
+
+variant=base
+if [ "$1" == "configure" ] ; then
+
+    # Source debconf library.
+    . /usr/share/debconf/confmodule
+
+    sv start oreka-api
+
+fi
+
+exit 0

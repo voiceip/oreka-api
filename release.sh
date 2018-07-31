@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 
-OOS=linux GOARCH=386 CGO_ENABLED=0 go build -o bin/oreka-api main.go
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bin/oreka-api main.go
+
+pushd distribution > /dev/null
+bash make-deb.sh
+popd > /dev/null
