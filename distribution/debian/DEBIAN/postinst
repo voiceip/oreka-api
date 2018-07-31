@@ -13,6 +13,8 @@ if [ "$1" == "configure" ] ; then
     # Source debconf library.
     . /usr/share/debconf/confmodule
 
+    mkdir -p /var/log/oreka-api
+
     sv start oreka-api
 
 fi
