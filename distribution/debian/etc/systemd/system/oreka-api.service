@@ -1,0 +1,14 @@
+Description=Oreka API
+
+[Service]
+ExecStart=/usr/local/bin/oreka-api
+Type=simple
+User=root
+Restart=on-failure
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=oreka-api
+
+[Install]
+WantedBy=multi-user.target
