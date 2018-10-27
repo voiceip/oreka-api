@@ -6,6 +6,7 @@ import (
 	"github.com/fatih/color"
 	"bufio"
 	"os"
+	"io"
 )
 
 func Check(e error) {
@@ -24,4 +25,36 @@ func Die(msg string, e error) {
 	reader.ReadString('\n')
 	Check(e)
 	os.Exit(1)
+}
+
+type deleteCloser struct {
+	io.ReadCloser
+	path string
+	f *os.File
+}
+
+func (d *deleteCloser) Close() error {
+	err := d.ReadCloser.Close()
+	if err != nil {
+		return err
+	}
+	err = os.Remove(d.path)
+	if err != nil {
+		fmt.Println("ERROR DeleteOnCloseReader", d.path)
+		return err
+	}
+	return nil
+}
+
+func (d *deleteCloser) Size() int64 {
+	fi, _ := d.f.Stat()
+	return fi.Size()
+}
+
+func DeleteOnCloseReader(path string) (*deleteCloser, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return &deleteCloser{f, path, f}, nil
 }

@@ -7,10 +7,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"fmt"
 	"./oreka"
-	"github.com/viert/lame"
-
-	"os"
-	"bufio"
+	"io"
+	"strconv"
 )
 
 var DB *sql.DB
@@ -84,25 +82,18 @@ func setupRouter() *gin.Engine {
 			wavSourceFile := "/var/log/orkaudio/audio/" + tape.Filename
 			switch format {
 			case "mp3":
-				f, err := os.Open(wavSourceFile)
+				mp := oreka.MediaProcessor{WAVFile: wavSourceFile, ID: callId}
+				stream, err := mp.ToMP3()
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Error", "debug": err.Error()})
 				} else {
-					defer f.Close()
-					reader := bufio.NewReader(f)
-
-					wr := lame.NewWriter(c.Writer)
-					wr.Encoder.SetBitrate(112)
-					wr.Encoder.SetQuality(1)
-					wr.Encoder.InitParams()
-
 					//c.Header("Transfer-Encoding", "chunked")
+					c.Header("Content-Length", strconv.FormatInt(stream.Size(), 10))
 					c.Header("Content-Disposition", `inline; filename="`+callId+`.mp3"`)
 					c.Header("Content-Type", "audio/mp3")
-					reader.WriteTo(wr)
-
+					io.Copy(c.Writer, stream)
+					stream.Close()
 				}
-
 			default:
 				c.File(wavSourceFile)
 			}
