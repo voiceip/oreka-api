@@ -76,62 +76,17 @@ func setupRouter() *gin.Engine {
 	authorized.GET("/play/:id", func(c *gin.Context) {
 		user := c.MustGet(gin.AuthUserKey).(string)
 		callId := c.Params.ByName("id")
-		format := c.DefaultQuery("format", "wav")
+		format := c.DefaultQuery("format", "")
 
 		tape, err := getByCallId(callId)
 		if err != nil {
 			fmt.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Error", "reason" :  err.Error()})
 		} else if tape != (oreka.OrkTape{}) {
-			wavSourceFile := recordBasePath + tape.Filename
-			serveMediaFile(c, callId, format, wavSourceFile)
+			sourceMediaFile := recordBasePath + tape.Filename
+			serveMediaFile(c, callId, format, sourceMediaFile)
 		} else {
 			c.JSON(http.StatusNotFound, gin.H{"user": user, "message": "Not Found", "callId": callId})
-		}
-	})
-
-	authorized.GET("/mix", func(c *gin.Context) {
-		user := c.MustGet(gin.AuthUserKey).(string)
-		segments := strings.Split(c.Query("segments"), ",")
-		uuid := oreka.MD5(c.Query("segments"))
-		tapes := make([]*oreka.OrkTape, len(segments))
-		errCount := 0
-		foundCount := 0
-		for i, v := range segments {
-			tape, err := getByCallId(v)
-			validTape := tape != oreka.OrkTape{}
-			if err == nil {
-				tapes[i] = &tape
-				if validTape  {
-					foundCount += 1
-				}
-			} else {
-				tapes[i] = nil
-				fmt.Println(err)
-				errCount += 1
-			}
-		}
-		if len(segments) <= 1 || len(segments) > 2 {
-			c.JSON(http.StatusBadRequest, gin.H{"message": "Mixing of only 2 legs supported currently"})
-		} else if errCount > 0 {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Error"})
-		} else if foundCount < len(segments) {
-			c.JSON(http.StatusNotFound, gin.H{"user": user, "message": "Some Segments Not Found", "segments": segments, "found" : foundCount,  "callId": uuid})
-		} else if foundCount == len(segments) {
-			wavSourceFileA := recordBasePath + tapes[0].Filename
-			wavSourceFileB := recordBasePath + tapes[1].Filename
-			mediaInfo, err := oreka.MixMediaStreams(uuid, wavSourceFileA, wavSourceFileB)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Error Mixing Media", "debug": err.Error()})
-			} else {
-				defer mediaInfo.Data.Close()
-				c.Header("Content-Length", strconv.FormatInt(mediaInfo.Length, 10))
-				c.Header("Content-Disposition", `inline; filename="`+uuid+`.mp3"`)
-				c.Header("Content-Type", "audio/mp3")
-				io.Copy(c.Writer, mediaInfo.Data)
-			}
-		} else {
-			c.JSON(http.StatusNotAcceptable, gin.H{"message": "Something Went Wrong"})
 		}
 	})
 
@@ -149,7 +104,7 @@ func serveMediaFile(c *gin.Context, callId string, format string, mediaFile stri
 			if fileExtension == format {
 				c.File(mediaFile)
 			} else {
-				mp := oreka.WAVProcessor{WAVFile: mediaFile, ID: &callId}
+				mp := oreka.MediaProcessor{FileName: mediaFile, ID: &callId}
 				stream, err := mp.ToMP3()
 				defer stream.Close()
 				if err != nil {
@@ -162,7 +117,7 @@ func serveMediaFile(c *gin.Context, callId string, format string, mediaFile stri
 					io.Copy(c.Writer, stream)
 				}
 			}
-		case "wav":
+		case "wav", "ogg", "opus" :
 			if fileExtension == format {
 				c.File(mediaFile)
 			} else {
