@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"fmt"
-	"./oreka"
+	"github.com/voiceip/oreka-api/oreka"
 	"io"
 	"strconv"
 	"path"
