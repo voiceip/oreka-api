@@ -8,9 +8,15 @@ die(){
  exit 1
 }
 
+
+SED_CMD="sed"
+if [ "$(uname)" == "Darwin" ]; then
+    SED_CMD="gsed"
+fi
+
 function replacePlaceHolders() {
     file="$1"
-    sed -i -e "s/_PACKAGE_/$PACKAGE/g" $file
+    $SED_CMD -i -e "s/_PACKAGE_/$PACKAGE/g" $file
 }
 
 
@@ -31,7 +37,7 @@ replacePlaceHolders "${BUILD_ROOT}/DEBIAN/postrm"
 replacePlaceHolders "${BUILD_ROOT}/DEBIAN/postinst"
 replacePlaceHolders "${BUILD_ROOT}/DEBIAN/control"
 
-sed -i "s/_VERSION_/$VERSION/g" $BUILD_ROOT/DEBIAN/control
+$SED_CMD -i "s/_VERSION_/$VERSION/g" $BUILD_ROOT/DEBIAN/control
 
 rm -f $PACKAGE.deb
 dpkg-deb --build $BUILD_ROOT $PACKAGE.deb

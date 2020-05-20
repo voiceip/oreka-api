@@ -1,28 +1,27 @@
 package oreka
 
 import (
-	"io/ioutil"
-	"encoding/xml"
-	"strings"
 	"database/sql"
-	"os"
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
 )
 
 var configFilePath = "/etc/oreka/database.hbm.xml"
 
 type HibernateConfiguration struct {
-	XMLName xml.Name `xml:"hibernate-configuration"`
-	Text    string   `xml:",chardata"`
+	XMLName        xml.Name `xml:"hibernate-configuration"`
+	Text           string   `xml:",chardata"`
 	SessionFactory struct {
-		Text string `xml:",chardata"`
+		Text     string `xml:",chardata"`
 		Property []struct {
 			Text string `xml:",chardata"`
 			Name string `xml:"name,attr"`
 		} `xml:"property"`
 	} `xml:"session-factory"`
 }
-
 
 func SetupDatabase() (*sql.DB, error) {
 
@@ -59,9 +58,13 @@ func SetupDatabase() (*sql.DB, error) {
 
 			host = hostdbParts[0]
 			database = hostdbParts[1]
+			//remove params
+			if pos := strings.Index(database, "?"); pos >= 0 {
+				database = database[:pos]
+			}
+
 		}
 	}
-
 
 	DB, err := sql.Open("mysql", username+":"+password+"@tcp("+host+":3306)/"+database)
 

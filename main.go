@@ -1,17 +1,18 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"net/http"
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
 	"fmt"
-	"github.com/voiceip/oreka-api/oreka"
 	"io"
-	"strconv"
-	"path"
-	"strings"
+	"net/http"
 	"os"
+	"path"
+	"strconv"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/voiceip/oreka-api/oreka"
 )
 
 var DB *sql.DB
@@ -48,7 +49,7 @@ func setupRouter() *gin.Engine {
 	r := gin.Default()
 
 	authorized := r.Group("/", gin.BasicAuth(gin.Accounts{
-		"root": "root",
+		"root":  "root",
 		"admin": "admin",
 	}))
 
@@ -61,7 +62,7 @@ func setupRouter() *gin.Engine {
 		tape, err := getByCallId(callId)
 		if err != nil {
 			fmt.Println(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Error", "reason" :  err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Error", "reason": err.Error()})
 		} else if tape != (oreka.OrkTape{}) {
 			if _, err := os.Stat(recordBasePath + tape.Filename); os.IsNotExist(err) {
 				c.JSON(http.StatusGone, tape)
@@ -81,7 +82,7 @@ func setupRouter() *gin.Engine {
 		tape, err := getByCallId(callId)
 		if err != nil {
 			fmt.Println(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Error", "reason" :  err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Error", "reason": err.Error()})
 		} else if tape != (oreka.OrkTape{}) {
 			sourceMediaFile := recordBasePath + tape.Filename
 			serveMediaFile(c, callId, format, sourceMediaFile)
@@ -117,7 +118,7 @@ func serveMediaFile(c *gin.Context, callId string, format string, mediaFile stri
 					io.Copy(c.Writer, stream)
 				}
 			}
-		case "wav", "ogg", "opus" :
+		case "wav", "ogg", "opus":
 			if fileExtension == format {
 				c.File(mediaFile)
 			} else {
