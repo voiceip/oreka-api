@@ -12,6 +12,7 @@ type OrkTape struct {
 	RemoteParty     string      `json:"remoteParty"`
 	Timestamp       string      `json:"timestamp"`
 	NativeCallID    string      `json:"nativeCallId"`
+	CallState    	string      `json:"callState"`
 	PortID          interface{} `json:"-"`
 	ServiceID       int         `json:"-"`
 }

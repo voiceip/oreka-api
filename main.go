@@ -25,7 +25,7 @@ func getByCallId(callId string) (oreka.OrkTape, error) {
 	if callId == "" {
 		return tape, nil
 	}
-	results, err := DB.Query("select filename, duration,  localParty, remoteParty, timestamp, nativeCallId from orktape where `nativeCallId` = ?", callId)
+	results, err := DB.Query("select filename, duration,  localParty, remoteParty, timestamp, nativeCallId, state from orktape where `nativeCallId` = ?", callId)
 	if err != nil {
 		return tape, err
 	} else {
@@ -33,7 +33,7 @@ func getByCallId(callId string) (oreka.OrkTape, error) {
 		for results.Next() {
 			count += 1
 			// for each row, scan the result into our tag composite object
-			err := results.Scan(&tape.Filename, &tape.Duration, &tape.LocalParty, &tape.RemoteParty, &tape.Timestamp, &tape.NativeCallID)
+			err := results.Scan(&tape.Filename, &tape.Duration, &tape.LocalParty, &tape.RemoteParty, &tape.Timestamp, &tape.NativeCallID, &tape.CallState)
 			if err != nil {
 				return tape, err
 			}
