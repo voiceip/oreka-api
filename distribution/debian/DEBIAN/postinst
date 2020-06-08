@@ -13,8 +13,9 @@ if [ "$1" == "configure" ] ; then
 
     mkdir -p /var/log/oreka-api
 
- 	systemctl enable $PAC
- 	systemctl start $PAC
+    systemctl daemon-reload
+    systemctl enable $PAC
+    systemctl start $PAC
 
 fi
 
