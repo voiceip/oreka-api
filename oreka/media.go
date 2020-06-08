@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+
+	"github.com/LasTshaMAN/Go-Execute/executor"
 )
 
 type MediaInfo struct {
@@ -31,12 +33,20 @@ func (mp *MediaProcessor) ToMP3() (*deleteCloser, error) {
 	return DeleteOnCloseReader(mp3FileName)
 }
 
+var threadPoolExecutor = executor.New(32)
+
 // OrkaudioTranscode trigger orkadudio trancode <filename>
 func OrkaudioTranscode(filename string) error {
-	transcodeError, err := exec.Command("orkaudio", "transcode", filename).CombinedOutput()
-	if err != nil {
-		fmt.Println("OrkaudioTranscode Error", string(transcodeError))
-		return err
-	}
-	return nil
+	ch := make(chan error)
+	threadPoolExecutor.Enqueue(func() {
+		transcodeError, err := exec.Command("orkaudio", "transcode", filename).CombinedOutput()
+		if err != nil {
+			fmt.Println("OrkaudioTranscode Error", string(transcodeError))
+			ch <- err
+		} else {
+			ch <- nil
+		}
+	})
+	result := <-ch
+	return result
 }
