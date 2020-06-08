@@ -1,4 +1,7 @@
+[Unit]
 Description=Oreka API
+After=network-online.target
+After=remote-fs.target
 
 [Service]
 ExecStart=/bin/sh -c '/usr/local/bin/oreka-api 2>&1 > /var/log/oreka-api/app.log'

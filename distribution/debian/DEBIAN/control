@@ -3,6 +3,6 @@ Version: 1._VERSION_
 Architecture: amd64
 Section: base
 Priority: standard
-Depends: lame, ffmpeg
+Depends: lame, ffmpeg, logrotate
 Maintainer: Kinshuk Bairagi <me@kinshuk.in>
 Description: Oreka Recorder API

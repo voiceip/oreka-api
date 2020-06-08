@@ -20,27 +20,24 @@ var err error
 
 const recordBasePath = "/var/log/orkaudio/audio/"
 
-func getByCallId(callId string) (oreka.OrkTape, error) {
+func getByCallID(callID string) (*oreka.OrkTape, error) {
 	var tape oreka.OrkTape
-	if callId == "" {
-		return tape, nil
+	if callID == "" {
+		return nil, nil
 	}
-	results, err := DB.Query("select filename, duration,  localParty, remoteParty, timestamp, nativeCallId, state from orktape where `nativeCallId` = ?", callId)
+	results, err := DB.Query("select filename, duration,  localParty, remoteParty, timestamp, nativeCallId, state from orktape where `nativeCallId` = ?", callID)
 	if err != nil {
-		return tape, err
-	} else {
-		count := 0
-		for results.Next() {
-			count += 1
-			// for each row, scan the result into our tag composite object
-			err := results.Scan(&tape.Filename, &tape.Duration, &tape.LocalParty, &tape.RemoteParty, &tape.Timestamp, &tape.NativeCallID, &tape.CallState)
-			if err != nil {
-				return tape, err
-			}
-		}
-		return tape, nil
+		return nil, err
 	}
-
+	defer results.Close()
+	for results.Next() {
+		err := results.Scan(&tape.Filename, &tape.Duration, &tape.LocalParty, &tape.RemoteParty, &tape.Timestamp, &tape.NativeCallID, &tape.CallState)
+		if err != nil {
+			return nil, err
+		}
+		return &tape, nil
+	}
+	return nil, nil
 }
 
 func setupRouter() *gin.Engine {
@@ -59,11 +56,11 @@ func setupRouter() *gin.Engine {
 
 	r.GET("/calls/:id", func(c *gin.Context) {
 		callId := c.Params.ByName("id")
-		tape, err := getByCallId(callId)
+		tape, err := getByCallID(callId)
 		if err != nil {
 			fmt.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Error", "reason": err.Error()})
-		} else if tape != (oreka.OrkTape{}) {
+		} else if tape != nil {
 			if _, err := os.Stat(recordBasePath + tape.Filename); os.IsNotExist(err) {
 				c.JSON(http.StatusGone, tape)
 			} else {
@@ -76,22 +73,42 @@ func setupRouter() *gin.Engine {
 
 	authorized.GET("/play/:id", func(c *gin.Context) {
 		user := c.MustGet(gin.AuthUserKey).(string)
-		callId := c.Params.ByName("id")
+		callID := c.Params.ByName("id")
 		format := c.DefaultQuery("format", "")
 
-		tape, err := getByCallId(callId)
+		tape, err := getByCallID(callID)
+		if err == nil && tape != nil {
+			err = convertMediaFileIfRequired(tape)
+		}
 		if err != nil {
 			fmt.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Error", "reason": err.Error()})
-		} else if tape != (oreka.OrkTape{}) {
+		} else if tape != nil {
 			sourceMediaFile := recordBasePath + tape.Filename
-			serveMediaFile(c, callId, format, sourceMediaFile)
+			serveMediaFile(c, callID, format, sourceMediaFile)
 		} else {
-			c.JSON(http.StatusNotFound, gin.H{"user": user, "message": "Not Found", "callId": callId})
+			c.JSON(http.StatusNotFound, gin.H{"user": user, "message": "Not Found", "callId": callID})
 		}
 	})
 
 	return r
+}
+
+func convertMediaFileIfRequired(tape *oreka.OrkTape) error {
+	sourceMediaFile := recordBasePath + tape.Filename
+	_, err := os.Stat(sourceMediaFile)
+	if os.IsNotExist(err) && tape.CallState == "STOP" {
+		//check if mcfFile is available
+		mcfMediaFile := sourceMediaFile[0:strings.LastIndex(sourceMediaFile, ".")] + ".mcf"
+		if _, err := os.Stat(mcfMediaFile); err == nil {
+			fmt.Printf("Running Transcode on NativeCallID %s, MCF : %s \n", tape.NativeCallID, mcfMediaFile)
+			err = oreka.OrkaudioTranscode(mcfMediaFile)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func serveMediaFile(c *gin.Context, callId string, format string, mediaFile string) {
